@@ -1,63 +1,49 @@
 
 import os
+import streamlit as st
 from groq import Groq
-from dotenv import load_dotenv
 
-# Step 1: Load the API key from the .env file
-load_dotenv()
-
-
-# Step 2: Connect to Groq
+# Get API key from Streamlit Secrets
 client = Groq(
-    api_key=os.getenv("GROQ_API_KEY")
+    api_key=st.secrets["GROQ_API_KEY"]
 )
 
-# Step 3: Set up conversation history
-# The system message defines your bot's personality
-conversation_history = [
-    {
-        "role": "system",
-        "content": "You are a helpful and friendly assistant."
-    }
-]
+st.title("⚡ Groq Chatbot")
 
-print("⚡ Groq Chatbot is ready! (Type 'quit' to exit)\n")
+# Initialize chat history
+if "messages" not in st.session_state:
+    st.session_state.messages = [
+        {
+            "role": "system",
+            "content": "You are a helpful and friendly assistant."
+        }
+    ]
 
-# Step 4: Chat loop
-while True:
-    # Get user input
-    user_input = input("You: ").strip()
+# User input box
+user_input = st.chat_input("Type your message...")
 
-    # Exit condition
-    if user_input.lower() in ["quit", "exit", "bye"]:
-        print("Chatbot: Goodbye! 👋")
-        break
+if user_input:
+    # Display user message
+    st.chat_message("user").write(user_input)
 
-    # Skip empty input
-    if not user_input:
-        continue
+    # Add to history
+    st.session_state.messages.append(
+        {"role": "user", "content": user_input}
+    )
 
-    # Add user message to history
-    conversation_history.append({
-        "role": "user",
-        "content": user_input
-    })
-
-    # Send to Groq and get a reply
+    # Get response from Groq
     response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",   # Fast, capable model on Groq
-        messages=conversation_history,      # Full history = bot remembers context
+        model="llama-3.3-70b-versatile",
+        messages=st.session_state.messages,
         max_tokens=1024
     )
 
-    # Extract the reply
     bot_reply = response.choices[0].message.content
 
-    # Save bot's reply to history so it remembers what it said
-    conversation_history.append({
-        "role": "assistant",
-        "content": bot_reply
-    })
+    # Store assistant response
+    st.session_state.messages.append(
+        {"role": "assistant", "content": bot_reply}
+    )
 
-    # Show the reply
-    print(f"\nChatbot: {bot_reply}\n")
+    # Display assistant response
+    st.chat_message("assistant").write(bot_reply)
